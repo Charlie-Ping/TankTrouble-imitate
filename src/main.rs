@@ -1,20 +1,9 @@
-use bevy::{
-    prelude::*,
-    asset::LoadState,
-    sprite::collide_aabb::{collide, Collision},
-    sprite::MaterialMesh2dBundle, a11y::accesskit::Vec2, utils::petgraph::visit::VisitMap, ecs::archetype::ArchetypeRow,
-    render::{
-        render_resource::{AddressMode, SamplerDescriptor},
-        texture::ImageSampler
-    }
-};
+use bevy::prelude::*;
+use tank_trouble_imitate::entity::tank;
+
 
 mod maze;
-
-
-const TANK_MOVE_SPEED: f32 = 3.;
-const TANK_TURNING_SPEED: f32 = 5.;
-const TANK_BULLET_LIMIT: i32 = 5;
+mod camera;
 
 const BULLET_SPEED: f32 = 4.;
 const BULLET_LIFECYCLE: f32 = 10.;
@@ -27,22 +16,22 @@ const TEXT_COLOR: Color = Color::rgb(0.5, 0.5, 1.0);
 const SCORE_COLOR: Color = Color::rgb(1.0, 0.5, 0.5);
 
 
-fn add_tank(mut commands: Commands) {
-    commands.spawn((Tank, Name("Blue".to_string())));
-    commands.spawn((Tank, Name("Red".to_string())));
-    commands.spawn((Tank, Name("Green".to_string())));
-}
-
 fn main() {
-
 
     App::new()
         .add_plugins(DefaultPlugins)
+
+        .add_systems(Startup, camera::spawn_camera)
+
+        .add_systems(Startup, maze::spawn_maze)
+
+        .add_systems(Startup, tank::spawn_tank)
+
         .insert_resource(ClearColor(BACKGROUND_COLOR))
-        .add_event::<maze::CollisionEvent>()
-        .insert_resource(FixedTime::new_from_secs(1.0 / 60.0))  
+
+        .insert_resource(FixedTime::new_from_secs(1.0 / 60.0))
+
         .add_systems(Startup, setup)
-        // .add_systems(FixedUpdate, )
         .run();
     
 }
@@ -71,9 +60,6 @@ struct ExpiredEvent;
 #[derive(Resource)]
 struct ExpiredSound(Handle<AudioSource>);
 
-// Tank
-#[derive(Component)]
-struct Tank;
 
 #[derive(Event, Default)]
 struct RotatingEvent();
@@ -91,39 +77,11 @@ struct Scoreboard;
 
 
 fn setup(
-    mut commands: Commands,
-    mut meshs: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
+    commands: Commands,
+    meshs: ResMut<Assets<Mesh>>,
+    materials: ResMut<Assets<ColorMaterial>>,
     asset_server: Res<AssetServer>
 ){
-    // camera 
-    commands.spawn(Camera2dBundle::default());
 
-    // sound
-    let mut rng = rand::thread_rng();
-
-    // gen maze
-    let mut module = maze::MazeGeneratorDFS::new(
-        maze::rand_odd_between(9..11),
-        maze::rand_odd_between(9..11)
-    );
     
-    module.init_maze()
-        .iter(1, 1);
-    
-    module.build(
-        |x: f32, y: f32, toward: u8| {
-            if toward == 0 {
-                // vertical
-                _ = commands.spawn(maze::WallBundle::new(x-200., y-200., 0))
-            } else if toward==1 {
-                _ = commands.spawn(maze::WallBundle::new(x-200., y-200., 1))
-            }
-            
-        }
-
-    );
-
-    // let tank_texture = asset_server.load("textures/texture.png");
 }
-
